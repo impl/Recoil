@@ -12,14 +12,61 @@
 'use strict';
 
 const err = require('recoil-shared/util/Recoil_err');
+const gkx = require('recoil-shared/util/Recoil_gkx');
 
 export type RecoilEnv = {
   RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: boolean,
+  RECOIL_GKS_ENABLED_UNSTABLE: string[],
 };
 
-const env: RecoilEnv = {
-  RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
-};
+const env: RecoilEnv = new Proxy(
+  {
+    RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
+    RECOIL_GKS_ENABLED_UNSTABLE: [],
+  },
+  {
+    set(obj, prop, value) {
+      if (prop === 'RECOIL_GKS_ENABLED_UNSTABLE') {
+        // Remove old GKs set in the environment, filter out any GKS that are
+        // already set by default, and set new GKs.
+        obj[prop].forEach(gkx.setFail);
+        obj[prop] = value.filter(gk => !gkx(gk));
+        obj[prop].forEach(gkx.setPass);
+      } else {
+        obj[prop] = value;
+      }
+
+      return true;
+    },
+  },
+);
+
+function readProcessEnvBooleanFlag(name: string, set: boolean => void) {
+  const sanitizedValue = process.env[name]?.toLowerCase()?.trim();
+
+  if (sanitizedValue == null || sanitizedValue === '') {
+    return;
+  }
+
+  const allowedValues = ['true', 'false'];
+  if (!allowedValues.includes(sanitizedValue)) {
+    throw err(
+      `process.env.${name} value must be 'true', 'false', or empty: ${sanitizedValue}`,
+    );
+  }
+
+  set(sanitizedValue === 'true');
+}
+
+function readProcessEnvStringArrayFlag(name: string, set: (string[]) => void) {
+  const sanitizedValue = process.env[name]?.trim();
+
+  if (sanitizedValue == null || sanitizedValue === '') {
+    return;
+  }
+
+  set(sanitizedValue.split(/\s*,\s*/));
+}
 
 /**
  * Allow NodeJS/NextJS/etc to set the initial state through process.env variable
@@ -38,21 +85,15 @@ function applyProcessEnvFlagOverrides() {
     return;
   }
 
-  const sanitizedValue =
-    process.env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED?.toLowerCase()?.trim();
-
-  if (sanitizedValue == null || sanitizedValue === '') {
-    return;
-  }
-
-  const allowedValues = ['true', 'false'];
-  if (!allowedValues.includes(sanitizedValue)) {
-    throw err(
-      `process.env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED value must be 'true', 'false', or empty: ${sanitizedValue}`,
-    );
-  }
-
-  env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = sanitizedValue === 'true';
+  readProcessEnvBooleanFlag(
+    'RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED',
+    value => {
+      env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = value;
+    },
+  );
+  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLED_UNSTABLE', value => {
+    env.RECOIL_GKS_ENABLED_UNSTABLE = value;
+  });
 }
 
 applyProcessEnvFlagOverrides();

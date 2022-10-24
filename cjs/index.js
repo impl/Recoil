@@ -536,9 +536,55 @@ var Recoil_ReactMode = {
   isFastRefreshEnabled
 };
 
-const env = {
-  RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true
-};
+const env = new Proxy({
+  RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
+  RECOIL_GKS_ENABLED_UNSTABLE: []
+}, {
+  set(obj, prop, value) {
+    if (prop === 'RECOIL_GKS_ENABLED_UNSTABLE') {
+      // Remove old GKs set in the environment, filter out any GKS that are
+      // already set by default, and set new GKs.
+      obj[prop].forEach(Recoil_gkx.setFail);
+      obj[prop] = value.filter(gk => !Recoil_gkx(gk));
+      obj[prop].forEach(Recoil_gkx.setPass);
+    } else {
+      obj[prop] = value;
+    }
+
+    return true;
+  }
+
+});
+
+function readProcessEnvBooleanFlag(name, set) {
+  var _process$env$name, _process$env$name$toL;
+
+  const sanitizedValue = (_process$env$name = process.env[name]) === null || _process$env$name === void 0 ? void 0 : (_process$env$name$toL = _process$env$name.toLowerCase()) === null || _process$env$name$toL === void 0 ? void 0 : _process$env$name$toL.trim();
+
+  if (sanitizedValue == null || sanitizedValue === '') {
+    return;
+  }
+
+  const allowedValues = ['true', 'false'];
+
+  if (!allowedValues.includes(sanitizedValue)) {
+    throw Recoil_err(`process.env.${name} value must be 'true', 'false', or empty: ${sanitizedValue}`);
+  }
+
+  set(sanitizedValue === 'true');
+}
+
+function readProcessEnvStringArrayFlag(name, set) {
+  var _process$env$name2;
+
+  const sanitizedValue = (_process$env$name2 = process.env[name]) === null || _process$env$name2 === void 0 ? void 0 : _process$env$name2.trim();
+
+  if (sanitizedValue == null || sanitizedValue === '') {
+    return;
+  }
+
+  set(sanitizedValue.split(/\s*,\s*/));
+}
 /**
  * Allow NodeJS/NextJS/etc to set the initial state through process.env variable
  * Note:  we don't assume 'process' is available in all runtime environments
@@ -546,8 +592,9 @@ const env = {
  * @see https://github.com/facebookexperimental/Recoil/issues/733
  */
 
+
 function applyProcessEnvFlagOverrides() {
-  var _process, _process$env$RECOIL_D, _process$env$RECOIL_D2;
+  var _process;
 
   // note: this check is needed in addition to the check below, runtime error will occur without it!
   // eslint-disable-next-line fb-www/typeof-undefined
@@ -559,19 +606,12 @@ function applyProcessEnvFlagOverrides() {
     return;
   }
 
-  const sanitizedValue = (_process$env$RECOIL_D = process.env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED) === null || _process$env$RECOIL_D === void 0 ? void 0 : (_process$env$RECOIL_D2 = _process$env$RECOIL_D.toLowerCase()) === null || _process$env$RECOIL_D2 === void 0 ? void 0 : _process$env$RECOIL_D2.trim();
-
-  if (sanitizedValue == null || sanitizedValue === '') {
-    return;
-  }
-
-  const allowedValues = ['true', 'false'];
-
-  if (!allowedValues.includes(sanitizedValue)) {
-    throw Recoil_err(`process.env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED value must be 'true', 'false', or empty: ${sanitizedValue}`);
-  }
-
-  env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = sanitizedValue === 'true';
+  readProcessEnvBooleanFlag('RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED', value => {
+    env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = value;
+  });
+  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLED_UNSTABLE', value => {
+    env.RECOIL_GKS_ENABLED_UNSTABLE = value;
+  });
 }
 
 applyProcessEnvFlagOverrides();
@@ -6079,7 +6119,7 @@ function recoilCallback(store, fn, args, extraInterface) {
   !!(ret instanceof Sentinel) ? process.env.NODE_ENV !== "production" ? Recoil_invariant(false, 'batchUpdates should return immediately') : Recoil_invariant(false) : void 0;
 
   if (Recoil_isPromise(ret)) {
-    ret.finally(() => {
+    ret = ret.finally(() => {
       var _releaseSnapshot;
 
       (_releaseSnapshot = releaseSnapshot) === null || _releaseSnapshot === void 0 ? void 0 : _releaseSnapshot();
