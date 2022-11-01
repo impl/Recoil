@@ -11,35 +11,20 @@
 
 'use strict';
 
+import type {AddOnlySet} from 'recoil-shared/util/Recoil_AddOnlySet';
+
+const enabledGKs = require('recoil-shared/util/Recoil_enabledGKs');
 const err = require('recoil-shared/util/Recoil_err');
-const gkx = require('recoil-shared/util/Recoil_gkx');
 
 export type RecoilEnv = {
   RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: boolean,
-  RECOIL_GKS_ENABLED_UNSTABLE: string[],
+  RECOIL_GKS_ENABLE: AddOnlySet<string>, // @oss-only
 };
 
-const env: RecoilEnv = new Proxy(
-  {
-    RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
-    RECOIL_GKS_ENABLED_UNSTABLE: [],
-  },
-  {
-    set(obj, prop, value) {
-      if (prop === 'RECOIL_GKS_ENABLED_UNSTABLE') {
-        // Remove old GKs set in the environment, filter out any GKS that are
-        // already set by default, and set new GKs.
-        obj[prop].forEach(gkx.setFail);
-        obj[prop] = value.filter(gk => !gkx(gk));
-        obj[prop].forEach(gkx.setPass);
-      } else {
-        obj[prop] = value;
-      }
-
-      return true;
-    },
-  },
-);
+const env: RecoilEnv = {
+  RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
+  RECOIL_GKS_ENABLE: enabledGKs, // @oss-only
+};
 
 function readProcessEnvBooleanFlag(name: string, set: boolean => void) {
   const sanitizedValue = process.env[name]?.toLowerCase()?.trim();
@@ -65,7 +50,7 @@ function readProcessEnvStringArrayFlag(name: string, set: (string[]) => void) {
     return;
   }
 
-  set(sanitizedValue.split(/\s*,\s*/));
+  set(sanitizedValue.split(/\s*,\s*|\s+/));
 }
 
 /**
@@ -91,8 +76,8 @@ function applyProcessEnvFlagOverrides() {
       env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = value;
     },
   );
-  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLED_UNSTABLE', value => {
-    env.RECOIL_GKS_ENABLED_UNSTABLE = value;
+  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLE', value => {
+    value.forEach(gk => env.RECOIL_GKS_ENABLE.add(gk)); // @oss-only
   });
 }
 

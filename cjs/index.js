@@ -377,24 +377,23 @@ var Recoil_Loadable$1 = /*#__PURE__*/Object.freeze({
  * @oncall recoil
  */
 
-const gks = new Map().set('recoil_hamt_2020', true).set('recoil_sync_external_store', true).set('recoil_suppress_rerender_in_callback', true).set('recoil_memory_managament_2020', true);
+const enabledGKs = new Set(['recoil_hamt_2020', 'recoil_sync_external_store', 'recoil_suppress_rerender_in_callback', 'recoil_memory_managament_2020']);
+var Recoil_enabledGKs = enabledGKs;
 
 function Recoil_gkx_OSS(gk) {
-  var _gks$get;
-
-  return (_gks$get = gks.get(gk)) !== null && _gks$get !== void 0 ? _gks$get : false;
+  return Recoil_enabledGKs.has(gk);
 }
 
 Recoil_gkx_OSS.setPass = gk => {
-  gks.set(gk, true);
+  Recoil_enabledGKs.add(gk);
 };
 
 Recoil_gkx_OSS.setFail = gk => {
-  gks.set(gk, false);
+  Recoil_enabledGKs.delete(gk);
 };
 
 Recoil_gkx_OSS.clear = () => {
-  gks.clear();
+  Recoil_enabledGKs.clear();
 };
 
 var Recoil_gkx = Recoil_gkx_OSS; // @oss-only
@@ -536,25 +535,11 @@ var Recoil_ReactMode = {
   isFastRefreshEnabled
 };
 
-const env = new Proxy({
+const env = {
   RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
-  RECOIL_GKS_ENABLED_UNSTABLE: []
-}, {
-  set(obj, prop, value) {
-    if (prop === 'RECOIL_GKS_ENABLED_UNSTABLE') {
-      // Remove old GKs set in the environment, filter out any GKS that are
-      // already set by default, and set new GKs.
-      obj[prop].forEach(Recoil_gkx.setFail);
-      obj[prop] = value.filter(gk => !Recoil_gkx(gk));
-      obj[prop].forEach(Recoil_gkx.setPass);
-    } else {
-      obj[prop] = value;
-    }
+  RECOIL_GKS_ENABLE: Recoil_enabledGKs // @oss-only
 
-    return true;
-  }
-
-});
+};
 
 function readProcessEnvBooleanFlag(name, set) {
   var _process$env$name, _process$env$name$toL;
@@ -583,7 +568,7 @@ function readProcessEnvStringArrayFlag(name, set) {
     return;
   }
 
-  set(sanitizedValue.split(/\s*,\s*/));
+  set(sanitizedValue.split(/\s*,\s*|\s+/));
 }
 /**
  * Allow NodeJS/NextJS/etc to set the initial state through process.env variable
@@ -609,8 +594,8 @@ function applyProcessEnvFlagOverrides() {
   readProcessEnvBooleanFlag('RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED', value => {
     env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = value;
   });
-  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLED_UNSTABLE', value => {
-    env.RECOIL_GKS_ENABLED_UNSTABLE = value;
+  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLE', value => {
+    value.forEach(gk => env.RECOIL_GKS_ENABLE.add(gk)); // @oss-only
   });
 }
 

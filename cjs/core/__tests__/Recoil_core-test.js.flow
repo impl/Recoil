@@ -14,7 +14,7 @@ const {
   getRecoilTestFn,
 } = require('recoil-shared/__test_utils__/Recoil_TestingUtils');
 
-let a, atom, store, nullthrows, getNodeLoadable, setNodeValue, RecoilEnv, gkx;
+let a, atom, store, nullthrows, getNodeLoadable, setNodeValue;
 
 const testRecoil = getRecoilTestFn(() => {
   const {
@@ -28,9 +28,6 @@ const testRecoil = getRecoilTestFn(() => {
   a = atom<number>({key: 'a', default: 0}).key;
 
   store = makeStore();
-
-  RecoilEnv = require('../Recoil_RecoilEnv');
-  gkx = require('recoil-shared/util/Recoil_gkx');
 });
 
 testRecoil('read default value', () => {
@@ -45,32 +42,4 @@ testRecoil('read default value', () => {
 testRecoil('setNodeValue returns written value when writing atom', () => {
   const writes = setNodeValue(store, store.getState().currentTree, a, 1);
   expect(nullthrows(writes.get(a)).contents).toBe(1);
-});
-
-describe('gatekeepers', () => {
-  testRecoil('environment propagates GKs', () => {
-    expect(gkx('recoil_test_gk')).toBe(false);
-    RecoilEnv.RECOIL_GKS_ENABLED_UNSTABLE = ['recoil_test_gk'];
-    expect(gkx('recoil_test_gk')).toBe(true);
-    RecoilEnv.RECOIL_GKS_ENABLED_UNSTABLE = [];
-    expect(gkx('recoil_test_gk')).toBe(false);
-  });
-
-  describe('support for process.env.RECOIL_GKS_ENABLED_UNSTABLE', () => {
-    const originalProcessEnv = process.env;
-    beforeEach(() => {
-      process.env = {...originalProcessEnv};
-      process.env.RECOIL_GKS_ENABLED_UNSTABLE =
-        'recoil_test_gk1,recoil_test_gk2';
-    });
-
-    afterEach(() => {
-      process.env = originalProcessEnv;
-    });
-
-    testRecoil('environment propagates GKs', () => {
-      expect(gkx('recoil_test_gk1')).toBe(true);
-      expect(gkx('recoil_test_gk2')).toBe(true);
-    });
-  });
 });

@@ -36,9 +36,13 @@
  };
 
 // recoilEnv.d.ts
+interface AddOnlySet<T> extends ReadonlySet<T> {
+  add(value: T): AddOnlySet<T>;
+}
+
 export interface RecoilEnv {
   RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: boolean;
-  RECOIL_GKS_ENABLED_UNSTABLE: string[];
+  RECOIL_GKS_ENABLE: AddOnlySet<string>;
 }
 
 export const RecoilEnv: RecoilEnv;
