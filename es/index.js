@@ -362,7 +362,7 @@ var Recoil_Loadable$1 = /*#__PURE__*/Object.freeze({
 
 const env = {
   RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: true,
-  RECOIL_GKS_ENABLE: new Set(['recoil_hamt_2020', 'recoil_sync_external_store', 'recoil_suppress_rerender_in_callback', 'recoil_memory_managament_2020'])
+  RECOIL_GKS_ENABLED: new Set(['recoil_hamt_2020', 'recoil_sync_external_store', 'recoil_suppress_rerender_in_callback', 'recoil_memory_managament_2020'])
 };
 
 function readProcessEnvBooleanFlag(name, set) {
@@ -418,9 +418,9 @@ function applyProcessEnvFlagOverrides() {
   readProcessEnvBooleanFlag('RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED', value => {
     env.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = value;
   });
-  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLE', value => {
+  readProcessEnvStringArrayFlag('RECOIL_GKS_ENABLED', value => {
     value.forEach(gk => {
-      env.RECOIL_GKS_ENABLE.add(gk);
+      env.RECOIL_GKS_ENABLED.add(gk);
     });
   });
 }
@@ -429,19 +429,19 @@ applyProcessEnvFlagOverrides();
 var Recoil_RecoilEnv = env;
 
 function Recoil_gkx_OSS(gk) {
-  return Recoil_RecoilEnv.RECOIL_GKS_ENABLE.has(gk);
+  return Recoil_RecoilEnv.RECOIL_GKS_ENABLED.has(gk);
 }
 
 Recoil_gkx_OSS.setPass = gk => {
-  Recoil_RecoilEnv.RECOIL_GKS_ENABLE.add(gk);
+  Recoil_RecoilEnv.RECOIL_GKS_ENABLED.add(gk);
 };
 
 Recoil_gkx_OSS.setFail = gk => {
-  Recoil_RecoilEnv.RECOIL_GKS_ENABLE.delete(gk);
+  Recoil_RecoilEnv.RECOIL_GKS_ENABLED.delete(gk);
 };
 
 Recoil_gkx_OSS.clear = () => {
-  Recoil_RecoilEnv.RECOIL_GKS_ENABLE.clear();
+  Recoil_RecoilEnv.RECOIL_GKS_ENABLED.clear();
 };
 
 var Recoil_gkx = Recoil_gkx_OSS; // @oss-only
